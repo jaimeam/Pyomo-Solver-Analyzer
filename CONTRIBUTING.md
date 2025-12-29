@@ -68,6 +68,7 @@ Closes #123
 - `refactor:` - Code refactoring without feature changes
 - `perf:` - Performance improvements
 - `test:` - Adding or updating tests
+- `chore:` - Build, dependency, or tooling changes
 
 **Commit message examples:**
 ```
