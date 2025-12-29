@@ -121,6 +121,7 @@ class ConstraintIntrospector:
         Compute normalized slack relative to RHS.
 
         Slack divided by magnitude of relevant bound (for relative tightness).
+        Uses the bound that determines the slack (the closest one).
 
         Parameters
         ----------
@@ -134,25 +135,35 @@ class ConstraintIntrospector:
         """
         slack = self.compute_slack(constraint)
         lower, upper = self.get_constraint_bounds(constraint)
+        body_val = self.get_constraint_body_value(constraint)
 
-        if math.isnan(slack) or slack == 0:
-            return float("nan") if math.isnan(slack) else 0.0
+        if math.isnan(slack) or math.isnan(body_val):
+            return float("nan")
+        if slack == 0:
+            return 0.0
 
-        # Use absolute value of the relevant bound
-        # If constraint is body <= upper, use upper
-        # If constraint is body >= lower, use lower
-        # If both exist, use the one closer to the body (tightest)
-        rhs_magnitude: Optional[float] = None
-        if upper is not None and not math.isnan(upper):
-            rhs_magnitude = abs(upper)
+        # Determine which bound is "active" or closest, corresponding to the slack
+        # Slack is min(body - lower, upper - body)
+        rhs_magnitude: float = 0.0
+
+        # Calculate distances to bounds
+        dist_lower = float("inf")
+        dist_upper = float("inf")
+
         if lower is not None and not math.isnan(lower):
-            if rhs_magnitude is None:
-                rhs_magnitude = abs(lower)
-            # If both exist, use the one with smaller magnitude (more restrictive)
-            elif upper is not None:
-                rhs_magnitude = min(abs(upper), abs(lower))
+            dist_lower = body_val - lower
+        if upper is not None and not math.isnan(upper):
+            dist_upper = upper - body_val
 
-        if rhs_magnitude is None or rhs_magnitude == 0:
+        # Identify closest bound
+        if dist_lower < dist_upper:
+            # Closer to lower bound
+            rhs_magnitude = abs(lower) if lower is not None else 0.0
+        else:
+            # Closer to upper bound
+            rhs_magnitude = abs(upper) if upper is not None else 0.0
+
+        if rhs_magnitude == 0:
             return abs(slack)  # Return absolute slack if RHS is zero
 
         return abs(slack / rhs_magnitude)
@@ -300,6 +311,7 @@ class ConstraintIntrospector:
             Dictionary with keys:
             - 'feasible': bool
             - 'violation': float (positive = infeasible)
+            - 'violation_type': str ('lower_bound', 'upper_bound', 'none')
             - 'violation_margin': float
             - 'active': bool (binding at tolerance)
         """
@@ -310,24 +322,32 @@ class ConstraintIntrospector:
             return {
                 "feasible": False,
                 "violation": float("nan"),
+                "violation_type": "error",
                 "violation_margin": float("nan"),
                 "active": False,
                 "error": "Cannot evaluate constraint body",
             }
 
         violation = 0.0
+        violation_type = "none"
         violation_margin = float("inf")
 
         # Check lower bound
         if lower is not None and not math.isnan(lower):
-            if body_val < lower - tolerance:
-                violation = max(violation, lower - tolerance - body_val)
+            diff = lower - body_val
+            if diff > tolerance:
+                if diff > violation:
+                    violation = diff
+                    violation_type = "lower_bound"
             violation_margin = min(violation_margin, body_val - lower)
 
         # Check upper bound
         if upper is not None and not math.isnan(upper):
-            if body_val > upper + tolerance:
-                violation = max(violation, body_val - upper - tolerance)
+            diff = body_val - upper
+            if diff > tolerance:
+                if diff > violation:
+                    violation = diff
+                    violation_type = "upper_bound"
             violation_margin = min(violation_margin, upper - body_val)
 
         is_feasible = violation <= 0.0
@@ -336,6 +356,7 @@ class ConstraintIntrospector:
         return {
             "feasible": is_feasible,
             "violation": violation,
+            "violation_type": violation_type,
             "violation_margin": violation_margin,
             "active": is_active,
         }

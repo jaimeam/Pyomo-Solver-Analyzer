@@ -29,7 +29,6 @@ classifiers = [
 
 dependencies = [
     "pyomo>=6.0",
-    "numpy>=1.19.0",
 ]
 
 [project.optional-dependencies]

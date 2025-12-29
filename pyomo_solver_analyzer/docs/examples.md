@@ -142,7 +142,6 @@ Optimize a financial portfolio subject to diversification constraints.
 
 ```python
 from pyomo.environ import *
-import numpy as np
 from pyomo_solver_analyzer import SolverDiagnostics
 
 # Data

@@ -14,10 +14,14 @@ from pyomo.environ import (
     SolverFactory,
     Var,
 )
-from src.analyzer import ConstraintAnalyzer, ConstraintTightness
-from src.diagnostics import SolverDiagnostics
-from src.introspection import ConstraintIntrospector
-from src.unfeasibility import ConstraintViolation, UnfeasibilityDetector
+
+from pyomo_solver_analyzer.analyzer import ConstraintAnalyzer, ConstraintTightness
+from pyomo_solver_analyzer.diagnostics import SolverDiagnostics
+from pyomo_solver_analyzer.introspection import ConstraintIntrospector
+from pyomo_solver_analyzer.unfeasibility import (
+    ConstraintViolation,
+    UnfeasibilityDetector,
+)
 
 
 def require_solver(solver_name: str) -> None:

@@ -5,9 +5,8 @@ Provides tools for detecting and diagnosing infeasible or nearly-infeasible
 solutions in Pyomo models.
 """
 
-import math
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from pyomo.core.base.constraint import ConstraintData  # type: ignore
 from pyomo.environ import Constraint  # type: ignore
@@ -127,37 +126,22 @@ class UnfeasibilityDetector:
         Optional[ConstraintViolation]
             Violation object if infeasible, None if feasible.
         """
-        lower, upper = self.introspector.get_constraint_bounds(constraint)
-        body_val = self.introspector.get_constraint_body_value(constraint)
+        result = self.introspector.evaluate_constraint_feasibility(
+            constraint, self.tolerance
+        )
 
-        if math.isnan(body_val):
-            return None
+        if not result["feasible"]:
+            violation = result["violation"]
+            violation_type = result["violation_type"]
+            severity = self._classify_severity(violation)
 
-        # Check lower bound violation
-        if lower is not None and not math.isnan(lower):
-            violation = lower - body_val
-            if violation > self.tolerance:
-                severity = self._classify_severity(violation)
-                return ConstraintViolation(
-                    constraint=constraint,
-                    constraint_name=constraint.name,
-                    violation_amount=violation,
-                    violation_type="lower_bound",
-                    severity=severity,
-                )
-
-        # Check upper bound violation
-        if upper is not None and not math.isnan(upper):
-            violation = body_val - upper
-            if violation > self.tolerance:
-                severity = self._classify_severity(violation)
-                return ConstraintViolation(
-                    constraint=constraint,
-                    constraint_name=constraint.name,
-                    violation_amount=violation,
-                    violation_type="upper_bound",
-                    severity=severity,
-                )
+            return ConstraintViolation(
+                constraint=constraint,
+                constraint_name=constraint.name,
+                violation_amount=violation,
+                violation_type=violation_type,
+                severity=severity,
+            )
 
         return None
 
@@ -202,36 +186,6 @@ class UnfeasibilityDetector:
 
         return violations
 
-    def find_near_infeasible_constraints(
-        self,
-        slack_threshold: float = 0.001,
-    ) -> List[Tuple[ConstraintData, float]]:
-        """
-        Find constraints that are nearly infeasible (small slack).
-
-        Parameters
-        ----------
-        slack_threshold : float
-            Slack threshold below which constraint is considered near-infeasible.
-
-        Returns
-        -------
-        List[Tuple[ConstraintData, float]]
-            List of (constraint, slack) tuples, sorted by slack (ascending).
-        """
-        near_infeasible = []
-
-        for constraint in self.model.component_data_objects(Constraint, active=True):
-            slack = self.introspector.compute_slack(constraint)
-
-            if not math.isnan(slack) and slack >= 0 and slack <= slack_threshold:
-                near_infeasible.append((constraint, slack))
-
-        # Sort by slack (ascending)
-        near_infeasible.sort(key=lambda x: x[1])
-
-        return near_infeasible
-
     def feasibility_report(self) -> Dict[str, Any]:
         """
         Generate a comprehensive feasibility report.
@@ -246,11 +200,9 @@ class UnfeasibilityDetector:
             - 'violations_by_severity': Dict[str, int]
             - 'max_violation': float
             - 'constraint_violations': List[ConstraintViolation]
-            - 'near_infeasible_constraints': int
             - 'total_violation': float
         """
         violations = self.find_infeasible_constraints()
-        near_infeasible = self.find_near_infeasible_constraints()
 
         # Count violations by severity
         violations_by_severity = {
@@ -277,7 +229,6 @@ class UnfeasibilityDetector:
             "max_violation": max_violation,
             "total_violation": total_violation,
             "constraint_violations": violations,
-            "near_infeasible_constraints": len(near_infeasible),
         }
 
     def get_most_violated_constraints(

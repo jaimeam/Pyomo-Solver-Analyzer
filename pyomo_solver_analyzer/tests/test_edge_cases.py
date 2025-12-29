@@ -6,7 +6,8 @@ import math
 
 import pytest
 from pyomo.environ import ConcreteModel, Constraint, Var
-from src.introspection import ConstraintIntrospector
+
+from pyomo_solver_analyzer.introspection import ConstraintIntrospector
 
 
 class TestConstraintIntrospectorEdgeCases:
@@ -85,7 +86,7 @@ class TestConstraintAnalyzerEdgeCases:
         model = ConcreteModel()
         model.x = Var()
 
-        from src.analyzer import ConstraintAnalyzer
+        from pyomo_solver_analyzer.analyzer import ConstraintAnalyzer
 
         analyzer = ConstraintAnalyzer(model)
 
@@ -99,7 +100,7 @@ class TestConstraintAnalyzerEdgeCases:
         model.c = Constraint(expr=model.x >= 5)
         model.x.set_value(7)
 
-        from src.analyzer import ConstraintAnalyzer
+        from pyomo_solver_analyzer.analyzer import ConstraintAnalyzer
 
         analyzer = ConstraintAnalyzer(model)
 
@@ -114,7 +115,7 @@ class TestConstraintAnalyzerEdgeCases:
         model.x.set_value(7)
 
         # No dual suffix defined
-        from src.analyzer import ConstraintAnalyzer
+        from pyomo_solver_analyzer.analyzer import ConstraintAnalyzer
 
         analyzer = ConstraintAnalyzer(model)
 
@@ -132,7 +133,7 @@ class TestUnfeasibilityDetectorEdgeCases:
         model.c = Constraint(expr=model.x >= 5.0)
         model.x.set_value(5.0 + 1e-7)  # Just barely feasible
 
-        from src.unfeasibility import UnfeasibilityDetector
+        from pyomo_solver_analyzer.unfeasibility import UnfeasibilityDetector
 
         detector = UnfeasibilityDetector(model, tolerance=1e-6)
 
@@ -146,7 +147,7 @@ class TestUnfeasibilityDetectorEdgeCases:
         model.c = Constraint(expr=model.x >= 5.0)
         model.x.set_value(5.0 - 1e-5)  # Barely infeasible
 
-        from src.unfeasibility import UnfeasibilityDetector
+        from pyomo_solver_analyzer.unfeasibility import UnfeasibilityDetector
 
         detector = UnfeasibilityDetector(model, tolerance=1e-6)
 
@@ -161,7 +162,7 @@ class TestUnfeasibilityDetectorEdgeCases:
         model.c = Constraint(expr=model.x >= 10)
         model.x.set_value(0)
 
-        from src.unfeasibility import UnfeasibilityDetector
+        from pyomo_solver_analyzer.unfeasibility import UnfeasibilityDetector
 
         custom_levels = {
             "critical": 1.0,

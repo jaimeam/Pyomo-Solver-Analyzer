@@ -207,27 +207,6 @@ class SolverDiagnostics:
         """
         return self.unfeasibility_detector.find_infeasible_constraints()
 
-    def get_near_infeasible_constraints(
-        self,
-        slack_threshold: float = 0.001,
-    ) -> List[Tuple[Any, float]]:
-        """
-        Get near-infeasible constraints.
-
-        Parameters
-        ----------
-        slack_threshold : float
-            Slack threshold for near-infeasibility.
-
-        Returns
-        -------
-        List[Tuple[constraint, slack]]
-            Near-infeasible constraints with slack values.
-        """
-        return self.unfeasibility_detector.find_near_infeasible_constraints(
-            slack_threshold
-        )
-
     def constraint_statistics(self) -> Dict[str, Any]:
         """
         Get summary statistics for all constraints.

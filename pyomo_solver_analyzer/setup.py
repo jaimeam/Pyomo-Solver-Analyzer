@@ -26,6 +26,5 @@ setup(
     python_requires=">=3.7",
     install_requires=[
         "pyomo>=6.0",
-        "numpy>=1.19.0",
     ],
 )
