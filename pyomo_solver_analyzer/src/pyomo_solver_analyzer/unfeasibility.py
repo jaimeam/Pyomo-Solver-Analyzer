@@ -5,13 +5,26 @@ Provides tools for detecting and diagnosing infeasible or nearly-infeasible
 solutions in Pyomo models.
 """
 
+import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from pyomo.core.base.constraint import ConstraintData  # type: ignore
-from pyomo.environ import Constraint  # type: ignore
+from pyomo.environ import ConcreteModel, Constraint  # type: ignore
 
 from .introspection import ConstraintIntrospector
+
+# Configure module logger
+logger = logging.getLogger(__name__)
+
+# Module-level constants for severity thresholds
+DEFAULT_SEVERITY_LEVELS = {
+    "critical": 1e-2,  # violation > 0.01
+    "high": 1e-4,  # violation > 0.0001
+    "medium": 1e-6,  # violation > 0.000001
+    "low": 0.0,  # any positive violation
+}
+SEVERITY_ORDER = ["critical", "high", "medium", "low"]
 
 
 @dataclass
@@ -55,14 +68,6 @@ class UnfeasibilityDetector:
     severity classification.
     """
 
-    # Default severity thresholds
-    DEFAULT_SEVERITY_LEVELS = {
-        "critical": 1e-2,  # violation > 0.01
-        "high": 1e-4,  # violation > 0.0001
-        "medium": 1e-6,  # violation > 0.000001
-        "low": 0.0,  # any positive violation
-    }
-
     def __init__(
         self,
         model: Any,
@@ -80,19 +85,49 @@ class UnfeasibilityDetector:
             Feasibility tolerance (default 1e-6).
         severity_levels : Dict[str, float], optional
             Custom severity thresholds mapping severity label to violation amount.
+
+        Raises
+        ------
+        TypeError
+            If model is not a valid Pyomo ConcreteModel or severity_levels is malformed.
+        ValueError
+            If tolerance is negative.
         """
+        if not isinstance(model, ConcreteModel):
+            raise TypeError(f"Expected ConcreteModel, got {type(model).__name__}")
+        if tolerance < 0:
+            raise ValueError(f"Tolerance must be non-negative, got {tolerance}")
+
         self.model: Any = model
         self.tolerance: float = tolerance
-        self.severity_levels: Dict[str, float] = (
-            severity_levels
-            if severity_levels is not None
-            else self.DEFAULT_SEVERITY_LEVELS
-        )
+
+        # Validate and set severity levels
+        if severity_levels is not None:
+            # Ensure all required keys are present
+            required_keys = set(SEVERITY_ORDER)
+            provided_keys = set(severity_levels.keys())
+            if not required_keys.issubset(provided_keys):
+                logger.warning(
+                    "severity_levels missing keys: %s. "
+                    "Using defaults for missing keys.",
+                    required_keys - provided_keys,
+                )
+                # Fill in missing keys from defaults
+                combined = DEFAULT_SEVERITY_LEVELS.copy()
+                combined.update(severity_levels)
+                self.severity_levels = combined
+            else:
+                self.severity_levels = severity_levels
+        else:
+            self.severity_levels = DEFAULT_SEVERITY_LEVELS.copy()
+
         self.introspector: ConstraintIntrospector = ConstraintIntrospector(model)
 
     def _classify_severity(self, violation_amount: float) -> str:
         """
         Classify violation severity based on amount.
+
+        Classifies in descending order: critical > high > medium > low.
 
         Parameters
         ----------
@@ -102,9 +137,10 @@ class UnfeasibilityDetector:
         Returns
         -------
         str
-            Severity level: 'critical', 'high', 'medium', 'low'.
+            Severity level: 'critical', 'high', 'medium', or 'low'.
         """
-        for severity in ["critical", "high", "medium", "low"]:
+        # Iterate through severity levels in order
+        for severity in SEVERITY_ORDER:
             if violation_amount >= self.severity_levels.get(severity, 0):
                 return severity
         return "low"
@@ -175,14 +211,19 @@ class UnfeasibilityDetector:
 
         # Filter by severity
         if severity is not None:
-            severity_order = ["critical", "high", "medium", "low"]
-            if severity in severity_order:
-                min_index = severity_order.index(severity)
+            if severity in SEVERITY_ORDER:
+                min_index = SEVERITY_ORDER.index(severity)
                 violations = [
                     v
                     for v in violations
-                    if severity_order.index(v.severity) <= min_index
+                    if SEVERITY_ORDER.index(v.severity) <= min_index
                 ]
+            else:
+                logger.warning(
+                    "Invalid severity level: %s. Valid levels: %s",
+                    severity,
+                    ", ".join(SEVERITY_ORDER),
+                )
 
         return violations
 

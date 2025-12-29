@@ -5,16 +5,25 @@ Provides high-level analysis of constraint tightness and identification
 of binding and nearly-binding constraints.
 """
 
+import logging
 import math
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from pyomo.core.base.constraint import ConstraintData  # type: ignore
 from pyomo.environ import (  # type: ignore
+    ConcreteModel,
     Constraint,
 )
 
 from .introspection import ConstraintIntrospector
+
+# Configure module logger
+logger = logging.getLogger(__name__)
+
+# Module-level constants
+NEARLY_BINDING_THRESHOLD = 0.01
+DEFAULT_TOLERANCE = 1e-6
 
 
 @dataclass
@@ -85,7 +94,7 @@ class ConstraintAnalyzer:
         self,
         model: Any,
         results: Optional[Any] = None,
-        tolerance: float = 1e-6,
+        tolerance: float = DEFAULT_TOLERANCE,
     ) -> None:
         """
         Initialize the constraint analyzer.
@@ -98,7 +107,19 @@ class ConstraintAnalyzer:
             Solver results object (used for dual values).
         tolerance : float
             Feasibility tolerance for identifying binding constraints.
+
+        Raises
+        ------
+        TypeError
+            If model is not a valid Pyomo ConcreteModel.
+        ValueError
+            If tolerance is negative.
         """
+        if not isinstance(model, ConcreteModel):
+            raise TypeError(f"Expected ConcreteModel, got {type(model).__name__}")
+        if tolerance < 0:
+            raise ValueError(f"Tolerance must be non-negative, got {tolerance}")
+
         self.model: Any = model
         self.results: Optional[Any] = results
         self.tolerance: float = tolerance
@@ -133,8 +154,12 @@ class ConstraintAnalyzer:
                     Constraint, active=True
                 ):
                     dual_mapping[constraint.name] = None
-        except Exception:
-            pass
+        except (AttributeError, TypeError) as e:
+            logger.warning(
+                "Failed to extract dual values from model: %s. "
+                "Proceeding without dual data.",
+                str(e),
+            )
 
         return dual_mapping
 
@@ -143,13 +168,11 @@ class ConstraintAnalyzer:
         constraint: ConstraintData,
         slack: float,
         normalized_slack: float,
-        lower_util: Optional[float],
-        upper_util: Optional[float],
     ) -> float:
         """
         Compute an overall tightness score for a constraint.
 
-        Combines multiple metrics into a single [0, 1] score where 1 = tight.
+        Combines slack metrics into a single [0, 1] score where 1 = tight.
 
         Parameters
         ----------
@@ -159,10 +182,6 @@ class ConstraintAnalyzer:
             Absolute slack value.
         normalized_slack : float
             Slack normalized by RHS.
-        lower_util : Optional[float]
-            Lower bound utilization.
-        upper_util : Optional[float]
-            Upper bound utilization.
 
         Returns
         -------
@@ -216,7 +235,7 @@ class ConstraintAnalyzer:
 
         # Compute tightness score
         tightness_score = self._compute_tightness_score(
-            constraint, slack, normalized_slack, lower_util, upper_util
+            constraint, slack, normalized_slack
         )
 
         # Get dual value
@@ -248,9 +267,14 @@ class ConstraintAnalyzer:
             try:
                 analysis = self.analyze_constraint(constraint)
                 analyses.append(analysis)
-            except Exception:
-                # Skip constraints that cannot be analyzed
-                pass
+            except (ValueError, TypeError, AttributeError) as e:
+                # Log and skip constraints that cannot be analyzed
+                logger.debug(
+                    "Could not analyze constraint %s: %s",
+                    constraint.name,
+                    str(e),
+                )
+                continue
 
         return analyses
 
@@ -303,7 +327,7 @@ class ConstraintAnalyzer:
 
     def get_nearly_binding_constraints(
         self,
-        slack_threshold: float = 0.01,
+        slack_threshold: float = NEARLY_BINDING_THRESHOLD,
     ) -> List[ConstraintTightness]:
         """
         Get constraints that are nearly binding (slack below threshold).
@@ -364,7 +388,7 @@ class ConstraintAnalyzer:
             "total_constraints": len(analyses),
             "binding_constraints": sum(1 for a in analyses if a.is_binding),
             "nearly_binding_constraints": sum(
-                1 for a in analyses if abs(a.slack) <= 0.01
+                1 for a in analyses if abs(a.slack) <= NEARLY_BINDING_THRESHOLD
             ),
             "avg_tightness_score": sum(tightness_scores) / len(tightness_scores),
             "max_tightness_score": max(tightness_scores),

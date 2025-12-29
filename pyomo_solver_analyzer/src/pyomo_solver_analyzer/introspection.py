@@ -5,13 +5,18 @@ Provides tools for extracting constraint bodies, evaluating constraints,
 and decomposing expressions into linear/nonlinear components.
 """
 
+import logging
 import math
 from typing import Any, Dict, Optional, Set, Tuple
 
 from pyomo.core.base.constraint import ConstraintData  # type: ignore
 from pyomo.environ import (  # type: ignore
+    ConcreteModel,
     value,
 )
+
+# Configure module logger
+logger = logging.getLogger(__name__)
 
 
 class ConstraintIntrospector:
@@ -30,7 +35,14 @@ class ConstraintIntrospector:
         ----------
         model : ConcreteModel
             The Pyomo model to introspect.
+
+        Raises
+        ------
+        TypeError
+            If model is not a valid Pyomo ConcreteModel.
         """
+        if not isinstance(model, ConcreteModel):
+            raise TypeError(f"Expected ConcreteModel, got {type(model).__name__}")
         self.model: Any = model
 
     def get_constraint_body_value(self, constraint: ConstraintData) -> float:
@@ -272,16 +284,26 @@ class ConstraintIntrospector:
                 else None,
                 "variables": sorted(all_vars),
             }
-        except Exception:
+        except (ImportError, AttributeError) as e:
             # Fallback: try to determine linearity by checking expression structure
+            logger.debug(
+                "Could not decompose expression for %s with standard repn: %s. "
+                "Using string fallback.",
+                constraint.name,
+                str(e),
+            )
             is_linear = True
             try:
                 # Simple heuristic: check if expression contains nonlinear operators
                 expr_str = str(constraint.body)
                 nonlinear_ops = ["sin", "cos", "tan", "exp", "log", "**", "^"]
                 is_linear = not any(op in expr_str for op in nonlinear_ops)
-            except Exception:
-                pass
+            except (TypeError, AttributeError) as e2:
+                logger.debug(
+                    "Could not determine linearity for constraint %s: %s",
+                    constraint.name,
+                    str(e2),
+                )
 
             return {
                 "is_linear": is_linear,

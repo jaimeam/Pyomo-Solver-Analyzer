@@ -4,6 +4,7 @@ Main diagnostics module providing unified interface for constraint analysis.
 High-level API for analyzing Pyomo solver results.
 """
 
+import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -12,6 +13,9 @@ from pyomo.environ import ConcreteModel  # type: ignore
 from .analyzer import ConstraintAnalyzer, ConstraintTightness
 from .introspection import ConstraintIntrospector
 from .unfeasibility import ConstraintViolation, UnfeasibilityDetector
+
+# Configure module logger
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -93,7 +97,19 @@ class SolverDiagnostics:
             Solver results object (for status/termination info).
         tolerance : float
             Feasibility tolerance (default 1e-6).
+
+        Raises
+        ------
+        TypeError
+            If model is not a valid Pyomo ConcreteModel.
+        ValueError
+            If tolerance is negative.
         """
+        if not isinstance(model, ConcreteModel):
+            raise TypeError(f"Expected ConcreteModel, got {type(model).__name__}")
+        if tolerance < 0:
+            raise ValueError(f"Tolerance must be non-negative, got {tolerance}")
+
         self.model: ConcreteModel = model
         self.results: Optional[Dict[str, Any]] = results
         self.tolerance: float = tolerance
