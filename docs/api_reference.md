@@ -1,8 +1,18 @@
 # API Reference
 
-## Core Classes
+## Overview
 
-### SolverDiagnostics
+**Three public classes** are available. Choose based on your use case:
+
+| Class | Purpose | When to Use |
+|-------|---------|------------|
+| **SolverDiagnostics** | Unified analysis interface | Default choice; combined tight constraints + feasibility check |
+| **ConstraintAnalyzer** | Tightness analysis only | Finding bottlenecks; ranking by binding status |
+| **UnfeasibilityDetector** | Feasibility diagnosis only | Model failed to solve; diagnosing violations |
+
+---
+
+## SolverDiagnostics
 
 Main high-level interface for constraint analysis.
 
@@ -184,11 +194,35 @@ def print_report(
     """
 ```
 
+### Understanding Results
+
+#### Tightness Score Interpretation
+
+**Tightness Score** ranges from **0 to 1**, where:
+- **0.95–1.0**: Very tight (binding or near-binding)
+- **0.80–0.95**: Tight (small slack, active constraint)
+- **0.50–0.80**: Moderate tightness
+- **0.0–0.50**: Loose (large slack)
+
+**Why it matters**: Tight constraints restrict the feasible region. Focus optimization efforts on relaxing them.
+
+#### Binding vs Nearly-Binding
+
+- **Binding**: Slack ≤ tolerance (default `1e-6`). At its limit; relaxing improves objective.
+- **Nearly-Binding**: Slack ≤ threshold (default `0.01`). Close to limit; may become binding with parameter changes.
+
+#### Dual Values
+
+When available (via solver suffixes), dual values indicate:
+- **Large positive dual** → Constraint is a bottleneck; relaxing it has high value
+- **Small/zero dual** → Constraint has little impact on objective
+- **Available if**: Solver supports dual value extraction (e.g., CPLEX, Gurobi)
+
 ---
 
 ### ConstraintAnalyzer
 
-Analyzes constraint tightness metrics.
+Analyzes constraint tightness metrics. Use this when you **only care about tightness**.
 
 ```python
 class ConstraintAnalyzer:
@@ -313,6 +347,29 @@ class UnfeasibilityDetector:
         """
 ```
 
+### Default Severity Thresholds
+
+| Severity | Default Threshold | Meaning |
+|----------|-------------------|---------|
+| **Critical** | > 0.01 | Major violation; model may not be solvable |
+| **High** | > 1e-4 | Significant violation; may cause issues |
+| **Medium** | > 1e-6 | Minor violation; typically acceptable |
+| **Low** | > 0 | Negligible; solver noise |
+
+**Customize** by passing `severity_levels` parameter:
+
+```python
+detector = UnfeasibilityDetector(
+    model,
+    severity_levels={
+        'critical': 1.0,
+        'high': 0.1,
+        'medium': 0.01,
+        'low': 0.0,
+    }
+)
+```
+
 #### Key Methods
 
 **check_constraint_feasibility**
@@ -375,7 +432,7 @@ def feasibility_report(self) -> Dict[str, Any]:
 
 ### ConstraintIntrospector
 
-Low-level constraint evaluation and decomposition.
+**Internal infrastructure** for constraint evaluation. Use `SolverDiagnostics` or `ConstraintAnalyzer` instead.
 
 ```python
 class ConstraintIntrospector:

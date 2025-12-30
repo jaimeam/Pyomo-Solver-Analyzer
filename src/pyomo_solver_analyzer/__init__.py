@@ -11,7 +11,6 @@ with focus on:
 
 from .analyzer import ConstraintAnalyzer
 from .diagnostics import SolverDiagnostics
-from .introspection import ConstraintIntrospector
 from .unfeasibility import UnfeasibilityDetector
 
 __version__ = "0.1.0"
@@ -19,5 +18,4 @@ __all__ = [
     "SolverDiagnostics",
     "ConstraintAnalyzer",
     "UnfeasibilityDetector",
-    "ConstraintIntrospector",
 ]

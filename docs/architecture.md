@@ -2,42 +2,84 @@
 
 ## System Design
 
-The Pyomo Solver Analyzer is organized into modular layers, each responsible for specific aspects of constraint analysis:
+The Pyomo Solver Analyzer is organized into modular layers:
 
 ```
-┌─────────────────────────────────────────────────────┐
-│       SolverDiagnostics (High-Level API)            │
-│   - Unified interface for all analyses              │
-│   - Report generation                               │
-│   - Pretty printing                                 │
-└──────────────┬──────────────────────────────────────┘
-               │
-       ┌───────┴─────────┬──────────────────┐
-       │                 │                  │
-       ▼                 ▼                  ▼
-┌──────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│ Constraint   │ │Unfeasibility    │ │  Constraint     │
-│ Analyzer     │ │ Detector        │ │ Introspector    │
-│              │ │                 │ │                 │
-│- Tightness   │ │- Violation      │ │- Body eval      │
-│  metrics     │ │  detection      │ │- Bounds extract │
-│- Binding     │ │- Severity       │ │- Slack compute  │
-│  detection   │ │  classification │ │- Expression     │
-│              │ │                 │ │  decomposition  │
-└──────┬───────┘ └──────┬──────────┘ └────────┬────────┘
-       │                │                     │
-       └────────────────┼─────────────────────┘
-                        │
-                        ▼
-            ┌────────────────────────┐
-            │   Pyomo Model          │
-            │                        │
-            │- Variables             │
-            │- Constraints           │
-            │- Objectives            │
-            │- Suffixes (dual, etc)  │
-            └────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│         SolverDiagnostics (User-Facing API)                 │
+│   - Unified interface for constraint analysis               │
+│   - Report generation & pretty printing                     │
+│   - START HERE for most analyses                            │
+└──────────┬──────────────────────┬───────────────────────────┘
+           │                      │
+           ▼                      ▼
+    ┌───────────────────┐  ┌─────────────────────┐
+    │ConstraintAnalyzer │  │UnfeasibilityDetector│
+    │                   │  │                     │
+    │- Tightness        │  │- Violation detect   │
+    │  metrics          │  │- Severity levels    │
+    │- Binding detect   │  │- Infeasibility      │
+    │- Dual values      │  │  diagnosis          │
+    └────────┬──────────┘  └────────┬────────────┘
+             │                      │
+             └──────────────┬───────┘
+                            │
+                            ▼
+            ┌────────────────────────────────────┐
+            │  ConstraintIntrospector            │
+            │  (Internal Infrastructure)         │
+            │                                    │
+            │  - Body evaluation                 │
+            │  - Bounds extraction               │
+            │  - Slack computation               │
+            │  - Expression decomposition        │
+            └────────────────┬───────────────────┘
+                             │
+                             ▼
+                      ┌──────────────┐
+                      │ Pyomo Model  │
+                      └──────────────┘
 ```
+
+## When to Use Each Module
+
+### SolverDiagnostics (Recommended starting point)
+Use this for **complete analysis** of a solved model:
+- Want overall diagnostics report
+- Need tight constraints + feasibility status together
+- Don't need to customize individual analyses
+
+```python
+diag = SolverDiagnostics(model, results)
+diag.print_report()  # One-liner analysis
+```
+
+### ConstraintAnalyzer (Specialized: Tightness Analysis)
+Use this when you **only care about constraint tightness**:
+- Finding bottleneck constraints
+- Ranking by binding status
+- Sensitivity to constraint relaxation
+- Custom tightness thresholds
+
+```python
+analyzer = ConstraintAnalyzer(model)
+tight = analyzer.get_tight_constraints(top_n=10)
+```
+
+### UnfeasibilityDetector (Specialized: Feasibility Diagnosis)
+Use this when you **only care about infeasibility**:
+- Model failed to solve or is infeasible
+- Diagnosing constraint violations
+- Severity classification of violations
+- Custom violation thresholds
+
+```python
+detector = UnfeasibilityDetector(model, tolerance=1e-5)
+violations = detector.find_infeasible_constraints()
+```
+
+### ConstraintIntrospector (Internal Use Only)
+This is **not intended for direct use**. It's used internally by other modules. Exposed here for documentation and advanced extension only.
 
 ## Core Modules
 

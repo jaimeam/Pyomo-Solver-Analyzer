@@ -57,9 +57,86 @@ TOP 2 TIGHT CONSTRAINTS
 ================================================================================
 ```
 
+### Interpreting the Output
+
+The output shows:
+- **2 constraints** analyzed
+- **min_prod** is tight (0.9456) with small slack (0.000123)
+- **capacity** is less tight (0.6190) with larger slack (0.004567)
+- No binding constraints found (all slack > tolerance)
+- Average tightness of 0.78 suggests moderate constraint activity
+
 ---
 
-## Example 1: Production Planning Problem
+## Example: Infeasible Model (Violation Diagnosis)
+
+When a model is infeasible, `SolverDiagnostics` diagnoses the violations:
+
+```python
+from pyomo.environ import *
+from pyomo_solver_analyzer import SolverDiagnostics
+
+# Create deliberately infeasible problem
+model = ConcreteModel()
+model.x = Var(bounds=(0, 10))
+model.y = Var(bounds=(0, 10))
+
+# Conflicting constraints
+model.c1 = Constraint(expr=model.x + model.y >= 15)  # x + y must be ≥ 15
+model.c2 = Constraint(expr=model.x + model.y <= 10)  # BUT x + y must be ≤ 10
+
+model.obj = Objective(expr=model.x + model.y, sense=minimize)
+
+solver = SolverFactory('glpk')
+results = solver.solve(model)
+
+# Analyze
+diag = SolverDiagnostics(model, results)
+diag.print_report()
+```
+
+Output:
+```
+================================================================================
+SOLVER DIAGNOSTICS REPORT
+================================================================================
+
+Model: unknown
+Solver Status: warning
+Termination: infeasible
+Feasible: False
+
+--------------------------------------------------------------------------------
+FEASIBILITY ISSUES
+--------------------------------------------------------------------------------
+Infeasible Constraints: 1
+
+CRITICAL Violations (amount > 0.01):
+- c1: violation of 5.000000 (lower bound exceeded)
+
+HIGH Violations (amount > 1e-4):
+(none)
+
+MEDIUM Violations (amount > 1e-6):
+(none)
+
+LOW Violations (amount > 0):
+(none)
+
+================================================================================
+```
+
+### Understanding Violation Severity
+
+- **Critical** (amount > 0.01): Infeasibility of 0.01 or more. Solver failed fundamentally.
+- **High** (amount > 1e-4): Significant but smaller violations. Numerical issues or solver stopped early.
+- **Medium/Low**: Negligible; typically solver rounding.
+
+**Action**: For critical violations, check constraint logic or variable bounds. In this example, the constraints are mathematically contradictory.
+
+---
+
+## Example: Production Planning Problem
 
 A manufacturer must decide production levels for multiple products given resource constraints.
 
@@ -441,3 +518,124 @@ for constraint in report.tight_constraints:
     if constraint.dual is not None and constraint.dual > 1000:
         print(f"Critical bottleneck: {constraint.constraint_name}")
 ```
+
+---
+
+## Output Interpretation Guide
+
+### Reading Tightness Scores
+
+When you see constraint analysis output like:
+
+```
+1. capacity               | Tightness: 0.8956 | Slack: 0.42 | Binding: False
+2. min_production        | Tightness: 0.9892 | Slack: 0.001 | Binding: False
+3. quality               | Tightness: 0.2145 | Slack: 8.76 | Binding: False
+```
+
+**What it means**:
+- **Rank 1 (0.8956)**: Capacity is tight. Only 0.42 units of slack. May become binding with small changes.
+- **Rank 2 (0.9892)**: Min production is very tight. Slack of 0.001 is nearly negligible. Almost binding.
+- **Rank 3 (0.2145)**: Quality is loose. Large slack of 8.76 provides buffer room.
+
+**Action**: Focus relaxation efforts on constraints 2 and 1. Constraint 3 is not a bottleneck.
+
+### Understanding Dual Values
+
+When dual values are available:
+
+```
+Constraint Analysis with Duals:
+- capacity:        Tightness: 0.92 | Dual: 2.45
+- min_production:  Tightness: 0.88 | Dual: 0.15
+- quality:         Tightness: 0.45 | Dual: 0.00
+```
+
+**What it means**:
+- **capacity (dual: 2.45)**: Each unit of relaxation improves objective by 2.45. High priority.
+- **min_production (dual: 0.15)**: Each unit of relaxation improves objective by 0.15. Lower priority.
+- **quality (dual: 0.00)**: Relaxing this has no impact on objective. Not a bottleneck.
+
+**Action**: Relaxing capacity gives best return on investment.
+
+### Feasibility vs Tightness
+
+When feasibility diagnosis shows:
+
+```
+Feasibility Summary:
+  Feasible: True
+  Infeasible Constraints: 0
+
+Constraint Statistics:
+  Binding Constraints: 2
+  Nearly-Binding Constraints: 5
+  Loose Constraints: 8
+```
+
+**What it means**:
+- **Model is feasible**: All constraints satisfied within tolerance.
+- **2 binding**: Active constraints (at their limits); cannot relax without changing solution.
+- **5 nearly-binding**: Close to active; might become binding with parameter perturbation.
+- **8 loose**: Have buffer room; not currently limiting optimization.
+
+**Action**: Binding and nearly-binding constraints are the focus for improvement efforts.
+
+### Interpreting Violation Severity
+
+If model is infeasible:
+
+```
+Violations by Severity:
+  CRITICAL (> 0.01): 1 constraint
+  HIGH (> 1e-4): 0 constraints
+  MEDIUM (> 1e-6): 2 constraints
+  LOW (> 0): 3 constraints
+
+Most Violated:
+1. min_demand: violation of 1.500000 (CRITICAL)
+```
+
+**What it means**:
+- **CRITICAL violation of 1.5**: min_demand constraint is off by 1.5 units. Major infeasibility.
+- **MEDIUM violations**: Numerical precision issues (solver rounding).
+- **LOW violations**: Negligible.
+
+**Action**: For the CRITICAL violation, check:
+1. Are variable bounds realistic?
+2. Are min_demand values achievable with available resources?
+3. Is the problem over-constrained?
+
+---
+
+## Workflow: Finding Bottlenecks in 3 Steps
+
+Here's a practical workflow to identify what limits your optimization:
+
+```python
+from pyomo_solver_analyzer import SolverDiagnostics
+
+# Step 1: Load diagnostics
+diag = SolverDiagnostics(model, results)
+
+# Step 2: Get the tight constraints
+tight = diag.get_tight_constraints(top_n=5)
+for i, t in enumerate(tight, 1):
+    print(f"{i}. {t.constraint_name} (tightness: {t.tightness_score:.2f}, slack: {t.slack:.4f})")
+
+# Output might be:
+# 1. machine_hours (tightness: 0.95, slack: 2.30)
+# 2. raw_material (tightness: 0.87, slack: 15.40)
+# 3. max_output (tightness: 0.62, slack: 45.00)
+
+# Step 3: Check dual values if available
+stats = diag.constraint_statistics()
+if stats['constraints_with_dual'] > 0:
+    # If duals are available, the top tight constraint with highest dual is the bottleneck
+    print("Dual values suggest: relax constraint with highest dual value for best improvement")
+```
+
+This identifies **which constraints most limit your solution**. Use this to:
+- Negotiate resource expansions
+- Prioritize operational improvements
+- Guide sensitivity analysis

@@ -4,11 +4,11 @@ A constraint analysis and debugging toolkit for [Pyomo](http://www.pyomo.org/), 
 
 ## Features
 
-- **Constraint Analysis**: Identify tight constraints, slack variables, and sensitivity metrics
-- **Infeasibility Detection**: Diagnose why models are infeasible
-- **Solver Diagnostics**: Analyze solver outputs and optimization results
-- **Constraint Introspection**: Deep inspection of constraint properties and relationships
-- **Performance Analysis**: Identify performance bottlenecks and limiting factors
+Three core capabilities designed to help you understand and improve optimization models:
+
+- **Find Bottlenecks**: Identify tight constraints limiting your solution (via `ConstraintAnalyzer`)
+- **Diagnose Infeasibility**: When models fail to solve, diagnose constraint violations and their severity (via `UnfeasibilityDetector`)
+- **Extract Insights**: Unified interface extracting dual values, slack analysis, and sensitivity metrics (via `SolverDiagnostics`)
 
 ## Installation
 
@@ -26,21 +26,23 @@ pip install -e ".[dev]"
 
 ## Quick Start
 
+The simplest approach is to use `SolverDiagnostics` for complete analysis:
+
 ```python
 from pyomo_solver_analyzer import SolverDiagnostics
 import pyomo.environ as pyo
 
-# Create and solve your Pyomo model
 model = pyo.ConcreteModel()
-# ... define your model ...
+# ... define and solve your model ...
 solver = pyo.SolverFactory('glpk')
-solver.solve(model)
+results = solver.solve(model)
 
-# Analyze the results
-diagnostics = SolverDiagnostics(model)
-report = diagnostics.generate_diagnostics_report()
-print(report)
+# One-line diagnostics report
+diagnostics = SolverDiagnostics(model, results)
+diagnostics.print_report()
 ```
+
+For specialized analyses or detailed examples, see the [Examples Guide](docs/examples.md).
 
 ## Documentation
 
