@@ -19,7 +19,7 @@ pip install pyomo-solver-analyzer
 
 Or install from source with development dependencies:
 ```bash
-git clone https://github.com/jaimeam/PyomoSolverAnalyzer.git
+git clone https://github.com/jaimeam/Pyomo-Solver-Analyzer.git
 cd PyomoSolverAnalyzer
 pip install -e ".[dev]"
 ```
@@ -90,7 +90,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-For issues, questions, or feature requests, please open an issue on [GitHub](https://github.com/jaimeam/PyomoSolverAnalyzer/issues).
+For issues, questions, or feature requests, please open an issue on [GitHub](https://github.com/jaimeam/Pyomo-Solver-Analyzer/issues).
 
 ## Citation
 
@@ -101,6 +101,6 @@ If you use this library in your research, please cite:
   title={Pyomo Solver Analyzer},
   author={Adroher, Jaime},
   year={2025},
-  url={https://github.com/jaimeam/PyomoSolverAnalyzer}
+  url={https://github.com/jaimeam/Pyomo-Solver-Analyzer}
 }
 ```

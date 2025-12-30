@@ -43,9 +43,9 @@ test = [
 ]
 
 [project.urls]
-Repository = "https://github.com/jaimeam/PyomoSolverAnalyzer"
-Documentation = "https://github.com/jaimeam/PyomoSolverAnalyzer/wiki"
-"Bug Tracker" = "https://github.com/jaimeam/PyomoSolverAnalyzer/issues"
+Repository = "https://github.com/jaimeam/Pyomo-Solver-Analyzer"
+Documentation = "https://github.com/jaimeam/Pyomo-Solver-Analyzer/wiki"
+"Bug Tracker" = "https://github.com/jaimeam/Pyomo-Solver-Analyzer/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pyomo_solver_analyzer"]

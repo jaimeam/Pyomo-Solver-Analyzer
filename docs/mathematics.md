@@ -30,14 +30,14 @@ $$\text{lower} = \text{value}, \quad \text{upper} = \text{value}$$
 At a solution point with variables at values $x^*$:
 
 ### Slack (for upper bound constraint)
-$$s_{upper} = \text{upper} - \text{body}(x^*)$$
+$$s_{\text{upper}} = \text{upper} - \text{body}(x^*)$$
 
 - **Positive slack**: Constraint is not binding, room for change
 - **Zero slack**: Constraint is binding (active)
 - **Negative slack**: Constraint is violated
 
 ### Surplus (for lower bound constraint)
-$$s_{lower} = \text{body}(x^*) - \text{lower}$$
+$$s_{\text{lower}} = \text{body}(x^*) - \text{lower}$$
 
 - **Positive surplus**: Constraint satisfied with room to spare
 - **Zero surplus**: Constraint binding from below
@@ -45,13 +45,13 @@ $$s_{lower} = \text{body}(x^*) - \text{lower}$$
 
 ### Absolute Slack
 For a constraint with both bounds, use the minimum absolute value:
-$$s = \min(|s_{lower}|, |s_{upper}|)$$
+$$s = \min(|s_{\text{lower}}|, |s_{\text{upper}}|)$$
 
 ## Normalized Slack
 
 To compare constraints of different magnitudes:
 
-$$\text{normalized\_slack} = \frac{s}{|\text{RHS}|}$$
+$$\text{normalized slack} = \frac{s}{|\text{RHS}|}$$
 
 Where RHS is the active bound magnitude.
 
@@ -62,15 +62,15 @@ Where RHS is the active bound magnitude.
 - Undefined when RHS = 0 (use absolute slack)
 
 **Interpretation**:
-- $\text{normalized\_slack} \approx 0$: Constraint is very tight
-- $\text{normalized\_slack} \approx 1$: Slack equals RHS magnitude
-- $\text{normalized\_slack} > 1$: Very loose constraint
+- $\text{normalized slack} \approx 0$: Constraint is very tight
+- $\text{normalized slack} \approx 1$: Slack equals RHS magnitude
+- $\text{normalized slack} > 1$: Very loose constraint
 
 ## Tightness Score
 
 Composite metric combining multiple indicators:
 
-$$\text{score} = e^{-|\text{normalized\_slack}|} \cdot \text{utilization\_factor}$$
+$$\text{score} = e^{-|\text{normalized slack}|} \cdot \text{utilization factor}$$
 
 Where:
 - **Exponential decay**: Penalizes larger slack values
@@ -92,13 +92,13 @@ Where:
 
 For ranged constraints (both lower and upper):
 
-$$u_{lower} = \frac{\text{body}(x^*) - \text{lower}}{\text{upper} - \text{lower}}$$
+$$u_{\text{lower}} = \frac{\text{body}(x^*) - \text{lower}}{\text{upper} - \text{lower}}$$
 
-$$u_{upper} = \frac{\text{upper} - \text{body}(x^*)}{\text{upper} - \text{lower}}$$
+$$u_{\text{upper}} = \frac{\text{upper} - \text{body}(x^*)}{\text{upper} - \text{lower}}$$
 
 **Properties**:
 - Range: $[0, 1]$ for feasible solutions
-- $u_{lower} + u_{upper} = 1$
+- $u_{\text{lower}} + u_{\text{upper}} = 1$
 - Close to 0 ⟹ constraint active on that side
 - Close to 1 ⟹ constraint far from that bound
 
@@ -112,15 +112,15 @@ $$u_{upper} = \frac{\text{upper} - \text{body}(x^*)}{\text{upper} - \text{lower}
 For constraint at solution $x^*$:
 
 **Lower bound violation**:
-$$v_{lower} = \max(0, \text{lower} - \text{body}(x^*) - \epsilon)$$
+$$v_{\text{lower}} = \max(0, \text{lower} - \text{body}(x^*) - \epsilon)$$
 
 Where $\epsilon$ is feasibility tolerance.
 
 **Upper bound violation**:
-$$v_{upper} = \max(0, \text{body}(x^*) - \text{upper} - \epsilon)$$
+$$v_{\text{upper}} = \max(0, \text{body}(x^*) - \text{upper} - \epsilon)$$
 
 **Total violation**:
-$$v = \max(v_{lower}, v_{upper})$$
+$$v = \max(v_{\text{lower}}, v_{\text{upper}})$$
 
 **Classification**:
 - Feasible: $v \leq 0$
