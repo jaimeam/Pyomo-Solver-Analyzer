@@ -6,36 +6,36 @@ The Pyomo Solver Analyzer is organized into modular layers, each responsible for
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│       SolverDiagnostics (High-Level API)           │
-│   - Unified interface for all analyses             │
-│   - Report generation                              │
+│       SolverDiagnostics (High-Level API)            │
+│   - Unified interface for all analyses              │
+│   - Report generation                               │
 │   - Pretty printing                                 │
 └──────────────┬──────────────────────────────────────┘
                │
        ┌───────┴─────────┬──────────────────┐
        │                 │                  │
        ▼                 ▼                  ▼
-┌──────────────┐ ┌──────────────┐ ┌─────────────────┐
-│ Constraint   │ │Unfeasibility │ │  Constraint     │
-│ Analyzer     │ │ Detector     │ │ Introspector    │
-│              │ │              │ │                 │
-│- Tightness   │ │- Violation   │ │- Body eval      │
-│  metrics     │ │  detection   │ │- Bounds extract │
-│- Binding     │ │- Severity    │ │- Slack compute  │
-│  detection   │ │  classification │- Expression    │
-│              │ │              │ │  decomposition  │
-└──────┬───────┘ └──────┬───────┘ └────────┬────────┘
-       │                │                  │
-       └────────────────┼──────────────────┘
+┌──────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│ Constraint   │ │Unfeasibility    │ │  Constraint     │
+│ Analyzer     │ │ Detector        │ │ Introspector    │
+│              │ │                 │ │                 │
+│- Tightness   │ │- Violation      │ │- Body eval      │
+│  metrics     │ │  detection      │ │- Bounds extract │
+│- Binding     │ │- Severity       │ │- Slack compute  │
+│  detection   │ │  classification │ │- Expression     │
+│              │ │                 │ │  decomposition  │
+└──────┬───────┘ └──────┬──────────┘ └────────┬────────┘
+       │                │                     │
+       └────────────────┼─────────────────────┘
                         │
                         ▼
             ┌────────────────────────┐
             │   Pyomo Model          │
             │                        │
-            │- Variables            │
-            │- Constraints          │
-            │- Objectives           │
-            │- Suffixes (dual, etc) │
+            │- Variables             │
+            │- Constraints           │
+            │- Objectives            │
+            │- Suffixes (dual, etc)  │
             └────────────────────────┘
 ```
 

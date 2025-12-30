@@ -1,14 +1,14 @@
-# Contributing to PyomoDebugger
+# Contributing to PyomoSolverAnalyzer
 
-Thank you for your interest in contributing to PyomoDebugger! We welcome contributions from the community and appreciate your help in improving this project. This guide explains the standards and workflow we follow.
+Thank you for your interest in contributing to PyomoSolverAnalyzer! We welcome contributions from the community and appreciate your help in improving this project. This guide explains the standards and workflow we follow.
 
 ## Getting Started
 
 1. Fork the repository on GitHub
 2. Clone your fork locally:
    ```bash
-   git clone https://github.com/yourusername/PyomoDebugger.git
-   cd PyomoDebugger
+   git clone https://github.com/yourusername/PyomoSolverAnalyzer.git
+   cd PyomoSolverAnalyzer
    ```
 3. Set up the development environment:
    ```bash
@@ -200,8 +200,8 @@ When reporting bugs, please include:
 
 ## License
 
-By contributing to PyomoDebugger, you agree that your contributions will be licensed under the project's license.
+By contributing to PyomoSolverAnalyzer, you agree that your contributions will be licensed under the project's license.
 
 ---
 
-Thank you for contributing to PyomoDebugger! Your efforts help make debugging Pyomo models easier and more accessible for everyone.
+Thank you for contributing to PyomoSolverAnalyzer! Your efforts help make debugging Pyomo models easier and more accessible for everyone.

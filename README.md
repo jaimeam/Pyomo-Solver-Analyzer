@@ -1,68 +1,104 @@
-# PyomoDebugger
+# PyomoSolverAnalyzer
 
-A debugging tool and utility suite for [Pyomo](http://www.pyomo.org/), an open-source optimization modeling language in Python.
+A constraint analysis and debugging toolkit for [Pyomo](http://www.pyomo.org/), an open-source optimization modeling language in Python. This library provides tools for analyzing solver outputs, diagnosing infeasibility, and identifying binding constraints in linear optimization models.
 
 ## Features
 
-- Debugging utilities for Pyomo models
-- Model inspection tools
-- Performance analysis
-- Error diagnosis and reporting
+- **Constraint Analysis**: Identify tight constraints, slack variables, and sensitivity metrics
+- **Infeasibility Detection**: Diagnose why models are infeasible
+- **Solver Diagnostics**: Analyze solver outputs and optimization results
+- **Constraint Introspection**: Deep inspection of constraint properties and relationships
+- **Performance Analysis**: Identify performance bottlenecks and limiting factors
+
+## Installation
+
+Install from PyPI:
+```bash
+pip install pyomo-solver-analyzer
+```
+
+Or install from source with development dependencies:
+```bash
+git clone https://github.com/jaimeam/PyomoSolverAnalyzer.git
+cd PyomoSolverAnalyzer
+pip install -e ".[dev]"
+```
 
 ## Quick Start
 
-### Prerequisites
+```python
+from pyomo_solver_analyzer import SolverDiagnostics
+import pyomo.environ as pyo
 
-- Python 3.8 or higher
-- [uv](https://astral.sh/blog/uv/) package manager
+# Create and solve your Pyomo model
+model = pyo.ConcreteModel()
+# ... define your model ...
+solver = pyo.SolverFactory('glpk')
+solver.solve(model)
 
-### Installation
-
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd PyomoDebugger
+# Analyze the results
+diagnostics = SolverDiagnostics(model)
+report = diagnostics.generate_diagnostics_report()
+print(report)
 ```
 
-2. Install dependencies using uv:
-```bash
-uv sync
-```
+## Documentation
 
-3. Install pre-commit hooks:
-```bash
-pre-commit install
-```
+- [API Reference](docs/api_reference.md)
+- [Architecture Guide](docs/architecture.md)
+- [Examples](docs/examples.md)
+- [Mathematical Background](docs/mathematics.md)
 
 ## Development
 
 For detailed development setup instructions, see [DEVELOPMENT.md](DEVELOPMENT.md).
 
-## Project Structure
+### Project Structure
 
 ```
-PyomoDebugger/
+PyomoSolverAnalyzer/
+├── src/
+│   └── pyomo_solver_analyzer/       # Main package
+│       ├── __init__.py
+│       ├── analyzer.py
+│       ├── diagnostics.py
+│       ├── introspection.py
+│       └── unfeasibility.py
+├── tests/                           # Test suite
+├── docs/                            # Documentation
 ├── README.md
-├── pyproject.toml
-├── requirements.txt
-├── .pre-commit-config.yaml
-├── DEVELOPMENT.md
-└── src/
-    └── pyomo_debugger/
-        └── __init__.py
+├── LICENSE
+├── pyproject.toml                   # Project configuration
+└── DEVELOPMENT.md
 ```
 
 ## Contributing
 
-Contributions are welcome! Please make sure to:
-1. Run pre-commit checks before committing
-2. Follow the code style guidelines (enforced by ruff and mypy)
-3. Write clear commit messages
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+Before committing, ensure:
+1. Code passes `ruff` linting: `ruff check src/`
+2. Code passes `mypy` type checking: `mypy src/`
+3. Tests pass: `pytest tests/`
+4. Pre-commit hooks pass: `pre-commit run --all-files`
 
 ## License
 
-[Add your license here]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Support
 
-For issues and questions, please open an issue on GitHub.
+For issues, questions, or feature requests, please open an issue on [GitHub](https://github.com/jaimeam/PyomoSolverAnalyzer/issues).
+
+## Citation
+
+If you use this library in your research, please cite:
+
+```bibtex
+@software{pyomo_solver_analyzer,
+  title={Pyomo Solver Analyzer},
+  author={Adroher, Jaime},
+  year={2025},
+  url={https://github.com/jaimeam/PyomoSolverAnalyzer}
+}
+```

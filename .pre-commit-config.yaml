@@ -15,13 +15,13 @@ repos:
           --show-error-codes,
           --warn-unused-ignores,
         ]
-        files: ^pyomo_solver_analyzer/src/
+        files: ^src/
 
   - repo: local
     hooks:
       - id: pytest
         name: pytest
-        entry: bash -c 'cd pyomo_solver_analyzer && python -m pytest tests/'
+        entry: python3 -m pytest tests/
         language: system
         types: [python]
         pass_filenames: false

@@ -1,6 +1,6 @@
 # Development Guide
 
-This document explains how to set up your development environment for PyomoDebugger.
+This document explains how to set up your development environment for PyomoSolverAnalyzer.
 
 ## Prerequisites
 
@@ -36,7 +36,7 @@ choco install uv
 
 ```bash
 git clone <repository-url>
-cd PyomoDebugger
+cd PyomoSolverAnalyzer
 ```
 
 ### 3. Create Virtual Environment and Install Dependencies
@@ -129,7 +129,7 @@ Then update `requirements.txt` and `pyproject.toml` accordingly.
 ## Project Structure
 
 ```
-PyomoDebugger/
+PyomoSolverAnalyzer/
 ├── src/
 │   └── pyomo_debugger/
 │       └── __init__.py
