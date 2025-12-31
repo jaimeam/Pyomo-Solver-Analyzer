@@ -134,18 +134,18 @@ class TestConstraintIntrospector:
         introspector = ConstraintIntrospector(simple_model)
 
         decomp = introspector.decompose_constraint_expression(simple_model.c1)
-        assert decomp["is_linear"] is True
-        assert "x" in decomp["variables"]
-        assert "y" in decomp["variables"]
-        assert len(decomp["linear_terms"]) >= 1
+        assert decomp.is_linear is True
+        assert "x" in decomp.variables
+        assert "y" in decomp.variables
+        assert len(decomp.linear_terms) >= 1
 
     def test_evaluate_constraint_feasibility(self, simple_model):
         """Test feasibility evaluation."""
         introspector = ConstraintIntrospector(simple_model)
 
         feas = introspector.evaluate_constraint_feasibility(simple_model.c1)
-        assert feas["feasible"] is True
-        assert feas["violation"] <= 0.0
+        assert feas.feasible is True
+        assert feas.violation <= 0.0
 
 
 class TestConstraintAnalyzer:
@@ -229,10 +229,10 @@ class TestConstraintAnalyzer:
         analyzer = ConstraintAnalyzer(tight_model)
 
         stats = analyzer.summary_statistics()
-        assert stats["total_constraints"] == 2
-        assert stats["binding_constraints"] >= 1
-        assert 0 <= stats["avg_tightness_score"] <= 1
-        assert stats["max_tightness_score"] >= stats["min_tightness_score"]
+        assert stats.total_constraints == 2
+        assert stats.binding_constraints >= 1
+        assert 0 <= stats.avg_tightness_score <= 1
+        assert stats.max_tightness_score >= stats.min_tightness_score
 
     def test_tightness_score_range(self, tight_model, loose_model):
         """Test that tightness scores are in valid range."""
@@ -308,17 +308,17 @@ class TestUnfeasibilityDetector:
         detector = UnfeasibilityDetector(feasible_model)
 
         report = detector.feasibility_report()
-        assert report["is_feasible"] is True
-        assert report["infeasible_constraints"] == 0
+        assert report.is_feasible is True
+        assert report.infeasible_constraints == 0
 
     def test_feasibility_report_infeasible(self, infeasible_model):
         """Test feasibility report for infeasible model."""
         detector = UnfeasibilityDetector(infeasible_model)
 
         report = detector.feasibility_report()
-        assert report["is_feasible"] is False
-        assert report["infeasible_constraints"] >= 1
-        assert report["max_violation"] > 0
+        assert report.is_feasible is False
+        assert report.infeasible_constraints >= 1
+        assert report.max_violation > 0
 
     def test_severity_classification(self, infeasible_model):
         """Test violation severity classification."""
@@ -367,16 +367,16 @@ class TestSolverDiagnostics:
         diag = SolverDiagnostics(test_model)
 
         report = diag.diagnose_feasibility()
-        assert "is_feasible" in report
-        assert "infeasible_constraints" in report
+        assert hasattr(report, "is_feasible")
+        assert hasattr(report, "infeasible_constraints")
 
     def test_constraint_statistics(self, test_model):
         """Test constraint statistics."""
         diag = SolverDiagnostics(test_model)
 
         stats = diag.constraint_statistics()
-        assert "total_constraints" in stats
-        assert stats["total_constraints"] >= 2
+        assert hasattr(stats, "total_constraints")
+        assert stats.total_constraints >= 2
 
     def test_generate_report(self, test_model):
         """Test report generation."""
@@ -385,7 +385,7 @@ class TestSolverDiagnostics:
         report = diag.generate_report()
         assert report.is_feasible is not None
         assert isinstance(report.tight_constraints, list)
-        assert isinstance(report.constraint_statistics, dict)
+        assert hasattr(report.constraint_statistics, "total_constraints")
 
     def test_print_report(self, test_model, capsys):
         """Test report printing."""

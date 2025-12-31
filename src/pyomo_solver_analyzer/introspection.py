@@ -7,7 +7,8 @@ and decomposing expressions into linear/nonlinear components.
 
 import logging
 import math
-from typing import Any, Dict, Optional, Set, Tuple
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from pyomo.core.base.constraint import ConstraintData  # type: ignore
 from pyomo.environ import (  # type: ignore
@@ -17,6 +18,80 @@ from pyomo.environ import (  # type: ignore
 
 # Configure module logger
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ExpressionDecomposition:
+    """
+    Represents decomposition of a constraint expression.
+
+    Attributes
+    ----------
+    is_linear : bool
+        Whether the expression is linear.
+    constant : float
+        Constant term in the expression.
+    linear_terms : Dict[str, float]
+        Mapping of variable names to their linear coefficients.
+    quadratic_terms : List[Tuple[str, str, float]]
+        List of (var1_name, var2_name, coefficient) for quadratic terms.
+    nonlinear_expr : Optional[str]
+        String representation of nonlinear component, if present.
+    variables : List[str]
+        Sorted list of all variable names appearing in the expression.
+    """
+
+    is_linear: bool
+    constant: float
+    linear_terms: Dict[str, float]
+    quadratic_terms: List[Tuple[str, str, float]]
+    nonlinear_expr: Optional[str]
+    variables: List[str]
+
+    def __str__(self) -> str:
+        """String representation of expression decomposition."""
+        return (
+            f"ExpressionDecomposition(is_linear={self.is_linear}, "
+            f"variables={len(self.variables)}, "
+            f"constant={self.constant:.6f})"
+        )
+
+
+@dataclass
+class ConstraintFeasibilityResult:
+    """
+    Represents feasibility evaluation result for a constraint.
+
+    Attributes
+    ----------
+    feasible : bool
+        Whether the constraint is satisfied.
+    violation : float
+        Amount by which constraint is violated (positive = infeasible).
+    violation_type : str
+        Type of violation: 'lower_bound', 'upper_bound', 'none', or 'error'.
+    violation_margin : float
+        Slack to the nearest bound.
+    active : bool
+        Whether constraint is binding at tolerance.
+    error : Optional[str]
+        Error message if feasibility could not be evaluated.
+    """
+
+    feasible: bool
+    violation: float
+    violation_type: str
+    violation_margin: float
+    active: bool
+    error: Optional[str] = None
+
+    def __str__(self) -> str:
+        """String representation of feasibility result."""
+        status = "feasible" if self.feasible else f"infeasible ({self.violation_type})"
+        return (
+            f"ConstraintFeasibilityResult(status={status}, "
+            f"violation={self.violation:.6e}, active={self.active})"
+        )
 
 
 class ConstraintIntrospector:
@@ -222,7 +297,7 @@ class ConstraintIntrospector:
 
     def decompose_constraint_expression(
         self, constraint: ConstraintData
-    ) -> Dict[str, Any]:
+    ) -> ExpressionDecomposition:
         """
         Decompose constraint expression into linear and nonlinear components.
 
@@ -235,14 +310,14 @@ class ConstraintIntrospector:
 
         Returns
         -------
-        Dict[str, Any]
-            Dictionary with keys:
-            - 'is_linear': bool
-            - 'constant': float
-            - 'linear_terms': Dict[var_name → coefficient]
-            - 'quadratic_terms': List[(var1_name, var2_name, coefficient)]
-            - 'nonlinear_expr': str representation or None
-            - 'variables': List of variable names
+        ExpressionDecomposition
+            Decomposition object containing:
+            - is_linear: bool
+            - constant: float
+            - linear_terms: Dict[var_name → coefficient]
+            - quadratic_terms: List[(var1_name, var2_name, coefficient)]
+            - nonlinear_expr: str representation or None
+            - variables: List of variable names
         """
         try:
             from pyomo.repn import generate_standard_repn  # type: ignore
@@ -274,16 +349,16 @@ class ConstraintIntrospector:
                     all_vars.add(v1.name)
                     all_vars.add(v2.name)
 
-            return {
-                "is_linear": is_linear,
-                "constant": float(repn.constant) if repn.constant else 0.0,
-                "linear_terms": linear_terms,
-                "quadratic_terms": quadratic_terms,
-                "nonlinear_expr": str(repn.nonlinear_expr)
+            return ExpressionDecomposition(
+                is_linear=is_linear,
+                constant=float(repn.constant) if repn.constant else 0.0,
+                linear_terms=linear_terms,
+                quadratic_terms=quadratic_terms,
+                nonlinear_expr=str(repn.nonlinear_expr)
                 if repn.nonlinear_expr
                 else None,
-                "variables": sorted(all_vars),
-            }
+                variables=sorted(all_vars),
+            )
         except (ImportError, AttributeError) as e:
             # Fallback: try to determine linearity by checking expression structure
             logger.debug(
@@ -305,18 +380,18 @@ class ConstraintIntrospector:
                     str(e2),
                 )
 
-            return {
-                "is_linear": is_linear,
-                "constant": None,
-                "linear_terms": {},
-                "quadratic_terms": [],
-                "nonlinear_expr": str(constraint.body),
-                "variables": [],
-            }
+            return ExpressionDecomposition(
+                is_linear=is_linear,
+                constant=0.0,
+                linear_terms={},
+                quadratic_terms=[],
+                nonlinear_expr=str(constraint.body),
+                variables=[],
+            )
 
     def evaluate_constraint_feasibility(
         self, constraint: ConstraintData, tolerance: float = 1e-6
-    ) -> Dict[str, Any]:
+    ) -> ConstraintFeasibilityResult:
         """
         Evaluate constraint feasibility at current solution.
 
@@ -329,26 +404,26 @@ class ConstraintIntrospector:
 
         Returns
         -------
-        Dict[str, Any]
-            Dictionary with keys:
-            - 'feasible': bool
-            - 'violation': float (positive = infeasible)
-            - 'violation_type': str ('lower_bound', 'upper_bound', 'none')
-            - 'violation_margin': float
-            - 'active': bool (binding at tolerance)
+        ConstraintFeasibilityResult
+            Feasibility result object containing:
+            - feasible: bool
+            - violation: float (positive = infeasible)
+            - violation_type: str ('lower_bound', 'upper_bound', 'none')
+            - violation_margin: float
+            - active: bool (binding at tolerance)
         """
         lower, upper = self.get_constraint_bounds(constraint)
         body_val = self.get_constraint_body_value(constraint)
 
         if math.isnan(body_val):
-            return {
-                "feasible": False,
-                "violation": float("nan"),
-                "violation_type": "error",
-                "violation_margin": float("nan"),
-                "active": False,
-                "error": "Cannot evaluate constraint body",
-            }
+            return ConstraintFeasibilityResult(
+                feasible=False,
+                violation=float("nan"),
+                violation_type="error",
+                violation_margin=float("nan"),
+                active=False,
+                error="Cannot evaluate constraint body",
+            )
 
         violation = 0.0
         violation_type = "none"
@@ -375,10 +450,10 @@ class ConstraintIntrospector:
         is_feasible = violation <= 0.0
         is_active = abs(violation_margin) <= tolerance
 
-        return {
-            "feasible": is_feasible,
-            "violation": violation,
-            "violation_type": violation_type,
-            "violation_margin": violation_margin,
-            "active": is_active,
-        }
+        return ConstraintFeasibilityResult(
+            feasible=is_feasible,
+            violation=violation,
+            violation_type=violation_type,
+            violation_margin=violation_margin,
+            active=is_active,
+        )

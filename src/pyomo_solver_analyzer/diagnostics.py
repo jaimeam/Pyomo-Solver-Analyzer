@@ -10,9 +10,13 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from pyomo.environ import ConcreteModel  # type: ignore
 
-from .analyzer import ConstraintAnalyzer, ConstraintTightness
+from .analyzer import (
+    ConstraintAnalyzer,
+    ConstraintSummaryStatistics,
+    ConstraintTightness,
+)
 from .introspection import ConstraintIntrospector
-from .unfeasibility import ConstraintViolation, UnfeasibilityDetector
+from .unfeasibility import ConstraintViolation, FeasibilityReport, UnfeasibilityDetector
 
 # Configure module logger
 logger = logging.getLogger(__name__)
@@ -37,9 +41,9 @@ class DiagnosticsReport:
         Top binding/nearly-binding constraints.
     infeasible_constraints : List[ConstraintViolation]
         Infeasible constraints (if any).
-    constraint_statistics : Dict[str, Any]
+    constraint_statistics : ConstraintSummaryStatistics
         Summary statistics.
-    feasibility_summary : Dict[str, Any]
+    feasibility_summary : FeasibilityReport
         Feasibility analysis summary.
     """
 
@@ -49,8 +53,8 @@ class DiagnosticsReport:
     is_feasible: bool
     tight_constraints: List[ConstraintTightness]
     infeasible_constraints: List[ConstraintViolation]
-    constraint_statistics: Dict[str, Any]
-    feasibility_summary: Dict[str, Any]
+    constraint_statistics: ConstraintSummaryStatistics
+    feasibility_summary: FeasibilityReport
 
 
 class SolverDiagnostics:
@@ -201,13 +205,13 @@ class SolverDiagnostics:
         """
         return self.analyzer.get_nearly_binding_constraints(slack_threshold)
 
-    def diagnose_feasibility(self) -> Dict[str, Any]:
+    def diagnose_feasibility(self) -> FeasibilityReport:
         """
         Diagnose feasibility of current solution.
 
         Returns
         -------
-        Dict[str, Any]
+        FeasibilityReport
             Feasibility report with violations (if any).
         """
         return self.unfeasibility_detector.feasibility_report()
@@ -223,13 +227,13 @@ class SolverDiagnostics:
         """
         return self.unfeasibility_detector.find_infeasible_constraints()
 
-    def constraint_statistics(self) -> Dict[str, Any]:
+    def constraint_statistics(self) -> ConstraintSummaryStatistics:
         """
         Get summary statistics for all constraints.
 
         Returns
         -------
-        Dict[str, Any]
+        ConstraintSummaryStatistics
             Statistics including averages, counts, etc.
         """
         return self.analyzer.summary_statistics()
@@ -261,7 +265,7 @@ class SolverDiagnostics:
             model_name=self.model.name if hasattr(self.model, "name") else "unknown",
             solver_status=status,
             termination_condition=termination,
-            is_feasible=feasibility["is_feasible"],
+            is_feasible=feasibility.is_feasible,
             tight_constraints=self.get_tight_constraints(top_n=top_n_tight),
             infeasible_constraints=(
                 self.get_infeasible_constraints() if include_violations else []
@@ -301,13 +305,13 @@ class SolverDiagnostics:
         print("\n" + "-" * 80)
         print("CONSTRAINT STATISTICS")
         print("-" * 80)
-        print(f"Total Constraints: {stats['total_constraints']}")
-        print(f"Binding Constraints: {stats['binding_constraints']}")
-        print(f"Nearly-Binding Constraints: {stats['nearly_binding_constraints']}")
-        print(f"Average Tightness Score: {stats['avg_tightness_score']:.4f}")
-        print(f"Max Tightness Score: {stats['max_tightness_score']:.4f}")
-        print(f"Min Tightness Score: {stats['min_tightness_score']:.4f}")
-        print(f"Constraints with Dual Values: {stats['constraints_with_dual']}")
+        print(f"Total Constraints: {stats.total_constraints}")
+        print(f"Binding Constraints: {stats.binding_constraints}")
+        print(f"Nearly-Binding Constraints: {stats.nearly_binding_constraints}")
+        print(f"Average Tightness Score: {stats.avg_tightness_score:.4f}")
+        print(f"Max Tightness Score: {stats.max_tightness_score:.4f}")
+        print(f"Min Tightness Score: {stats.min_tightness_score:.4f}")
+        print(f"Constraints with Dual Values: {stats.constraints_with_dual}")
 
         # Tight constraints
         print("\n" + "-" * 80)
@@ -325,17 +329,17 @@ class SolverDiagnostics:
 
         # Feasibility
         feas = report.feasibility_summary
-        if not report.is_feasible or feas["infeasible_constraints"] > 0:
+        if not report.is_feasible or feas.infeasible_constraints > 0:
             print("\n" + "-" * 80)
             print("FEASIBILITY ISSUES")
             print("-" * 80)
-            print(f"Infeasible Constraints: {feas['infeasible_constraints']}")
-            print(f"  Critical: {feas['violations_by_severity']['critical']}")
-            print(f"  High: {feas['violations_by_severity']['high']}")
-            print(f"  Medium: {feas['violations_by_severity']['medium']}")
-            print(f"  Low: {feas['violations_by_severity']['low']}")
-            print(f"Max Violation: {feas['max_violation']:.6e}")
-            print(f"Total Violation: {feas['total_violation']:.6e}")
+            print(f"Infeasible Constraints: {feas.infeasible_constraints}")
+            print(f"  Critical: {feas.violations_by_severity['critical']}")
+            print(f"  High: {feas.violations_by_severity['high']}")
+            print(f"  Medium: {feas.violations_by_severity['medium']}")
+            print(f"  Low: {feas.violations_by_severity['low']}")
+            print(f"Max Violation: {feas.max_violation:.6e}")
+            print(f"Total Violation: {feas.total_violation:.6e}")
 
             if report.infeasible_constraints:
                 print("\nTop Infeasible Constraints:")

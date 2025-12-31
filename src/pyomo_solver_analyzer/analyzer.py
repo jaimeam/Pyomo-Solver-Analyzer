@@ -27,6 +27,50 @@ DEFAULT_TOLERANCE = 1e-6
 
 
 @dataclass
+class ConstraintSummaryStatistics:
+    """
+    Summary statistics for constraint tightness analysis.
+
+    Attributes
+    ----------
+    total_constraints : int
+        Total number of constraints analyzed.
+    binding_constraints : int
+        Number of binding constraints.
+    nearly_binding_constraints : int
+        Number of nearly-binding constraints.
+    avg_tightness_score : float
+        Average tightness score across all constraints.
+    max_tightness_score : float
+        Maximum tightness score.
+    min_tightness_score : float
+        Minimum tightness score.
+    avg_slack : float
+        Average slack across constraints.
+    constraints_with_dual : int
+        Number of constraints with dual values available.
+    """
+
+    total_constraints: int
+    binding_constraints: int
+    nearly_binding_constraints: int
+    avg_tightness_score: float
+    max_tightness_score: float
+    min_tightness_score: float
+    avg_slack: float
+    constraints_with_dual: int
+
+    def __str__(self) -> str:
+        """String representation of summary statistics."""
+        return (
+            f"ConstraintSummaryStatistics: "
+            f"total={self.total_constraints}, "
+            f"binding={self.binding_constraints}, "
+            f"avg_tightness={self.avg_tightness_score:.4f}"
+        )
+
+
+@dataclass
 class ConstraintTightness:
     """
     Represents tightness metrics for a single constraint.
@@ -165,7 +209,6 @@ class ConstraintAnalyzer:
 
     def _compute_tightness_score(
         self,
-        constraint: ConstraintData,
         slack: float,
         normalized_slack: float,
     ) -> float:
@@ -176,8 +219,6 @@ class ConstraintAnalyzer:
 
         Parameters
         ----------
-        constraint : ConstraintData
-            The constraint.
         slack : float
             Absolute slack value.
         normalized_slack : float
@@ -234,9 +275,7 @@ class ConstraintAnalyzer:
         is_binding = abs(slack) <= self.tolerance if not math.isnan(slack) else False
 
         # Compute tightness score
-        tightness_score = self._compute_tightness_score(
-            constraint, slack, normalized_slack
-        )
+        tightness_score = self._compute_tightness_score(slack, normalized_slack)
 
         # Get dual value
         dual = self._dual_mapping.get(constraint.name, None)
@@ -349,50 +388,50 @@ class ConstraintAnalyzer:
             if not math.isnan(a.slack) and abs(a.slack) <= slack_threshold
         ]
 
-    def summary_statistics(self) -> Dict[str, Any]:
+    def summary_statistics(self) -> ConstraintSummaryStatistics:
         """
         Compute summary statistics for all constraints.
 
         Returns
         -------
-        Dict[str, Any]
-            Dictionary with:
-            - 'total_constraints': int
-            - 'binding_constraints': int
-            - 'nearly_binding_constraints': int
-            - 'avg_tightness_score': float
-            - 'max_tightness_score': float
-            - 'min_tightness_score': float
-            - 'avg_slack': float
-            - 'constraints_with_dual': int
+        ConstraintSummaryStatistics
+            Summary statistics object containing:
+            - total_constraints: int
+            - binding_constraints: int
+            - nearly_binding_constraints: int
+            - avg_tightness_score: float
+            - max_tightness_score: float
+            - min_tightness_score: float
+            - avg_slack: float
+            - constraints_with_dual: int
         """
         analyses = self.analyze_all_constraints()
 
         if not analyses:
-            return {
-                "total_constraints": 0,
-                "binding_constraints": 0,
-                "nearly_binding_constraints": 0,
-                "avg_tightness_score": 0.0,
-                "max_tightness_score": 0.0,
-                "min_tightness_score": 0.0,
-                "avg_slack": 0.0,
-                "constraints_with_dual": 0,
-            }
+            return ConstraintSummaryStatistics(
+                total_constraints=0,
+                binding_constraints=0,
+                nearly_binding_constraints=0,
+                avg_tightness_score=0.0,
+                max_tightness_score=0.0,
+                min_tightness_score=0.0,
+                avg_slack=0.0,
+                constraints_with_dual=0,
+            )
 
         tightness_scores = [a.tightness_score for a in analyses]
         slacks = [a.slack for a in analyses if not math.isnan(a.slack)]
         dual_values = [a.dual for a in analyses if a.dual is not None]
 
-        return {
-            "total_constraints": len(analyses),
-            "binding_constraints": sum(1 for a in analyses if a.is_binding),
-            "nearly_binding_constraints": sum(
+        return ConstraintSummaryStatistics(
+            total_constraints=len(analyses),
+            binding_constraints=sum(1 for a in analyses if a.is_binding),
+            nearly_binding_constraints=sum(
                 1 for a in analyses if abs(a.slack) <= NEARLY_BINDING_THRESHOLD
             ),
-            "avg_tightness_score": sum(tightness_scores) / len(tightness_scores),
-            "max_tightness_score": max(tightness_scores),
-            "min_tightness_score": min(tightness_scores),
-            "avg_slack": sum(slacks) / len(slacks) if slacks else 0.0,
-            "constraints_with_dual": len(dual_values),
-        }
+            avg_tightness_score=sum(tightness_scores) / len(tightness_scores),
+            max_tightness_score=max(tightness_scores),
+            min_tightness_score=min(tightness_scores),
+            avg_slack=sum(slacks) / len(slacks) if slacks else 0.0,
+            constraints_with_dual=len(dual_values),
+        )

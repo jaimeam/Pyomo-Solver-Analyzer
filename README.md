@@ -1,6 +1,6 @@
 # PyomoSolverAnalyzer
 
-A constraint analysis and debugging toolkit for [Pyomo](http://www.pyomo.org/), an open-source optimization modeling language in Python. This library provides tools for analyzing solver outputs, diagnosing infeasibility, and identifying binding constraints in linear optimization models.
+A constraint analysis and debugging toolkit for [Pyomo](https://pyomo.readthedocs.io/), an open-source optimization modeling language in Python. This library provides tools for analyzing solver outputs, diagnosing infeasibility, and identifying binding constraints in linear optimization models.
 
 ## Features
 

@@ -236,9 +236,9 @@ class TestConstraintAnalyzerEdgeCases:
         analyzer = ConstraintAnalyzer(model)
         stats = analyzer.summary_statistics()
 
-        assert stats["total_constraints"] == 0
-        assert stats["binding_constraints"] == 0
-        assert stats["avg_tightness_score"] == 0.0
+        assert stats.total_constraints == 0
+        assert stats.binding_constraints == 0
+        assert stats.avg_tightness_score == 0.0
 
 
 class TestUnfeasibilityDetectorEdgeCases:
@@ -353,9 +353,9 @@ class TestUnfeasibilityDetectorEdgeCases:
         detector = UnfeasibilityDetector(model)
         report = detector.feasibility_report()
 
-        assert report["is_feasible"] is True
-        assert report["total_constraints"] == 0
-        assert report["infeasible_constraints"] == 0
+        assert report.is_feasible is True
+        assert report.total_constraints == 0
+        assert report.infeasible_constraints == 0
 
 
 if __name__ == "__main__":

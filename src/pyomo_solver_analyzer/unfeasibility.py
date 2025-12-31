@@ -6,7 +6,7 @@ solutions in Pyomo models.
 """
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from pyomo.core.base.constraint import ConstraintData  # type: ignore
@@ -58,6 +58,62 @@ class ConstraintViolation:
             f"{self.constraint_name}: {self.violation_type} "
             f"violated by {self.violation_amount:.6e} ({self.severity})"
         )
+
+
+@dataclass
+class FeasibilityReport:
+    """
+    Comprehensive feasibility report for a Pyomo model.
+
+    Attributes
+    ----------
+    is_feasible : bool
+        Whether the model solution is feasible.
+    total_constraints : int
+        Total number of constraints in the model.
+    infeasible_constraints : int
+        Number of infeasible constraints.
+    violations_by_severity : Dict[str, int]
+        Count of violations by severity level.
+    max_violation : float
+        Maximum violation amount found.
+    total_violation : float
+        Sum of all violations.
+    constraint_violations : List[ConstraintViolation]
+        List of all constraint violations found.
+    """
+
+    is_feasible: bool
+    total_constraints: int
+    infeasible_constraints: int
+    violations_by_severity: Dict[str, int]
+    max_violation: float
+    total_violation: float
+    constraint_violations: List[ConstraintViolation] = field(default_factory=list)
+
+    def __str__(self) -> str:
+        """String representation of feasibility report."""
+        status = "FEASIBLE" if self.is_feasible else "INFEASIBLE"
+        return (
+            f"FeasibilityReport({status}): "
+            f"{self.infeasible_constraints}/{self.total_constraints} violations, "
+            f"max_violation={self.max_violation:.6e}"
+        )
+
+    def summary(self) -> str:
+        """Generate a summary string of the report."""
+        lines = [
+            f"Feasibility Report: {'FEASIBLE' if self.is_feasible else 'INFEASIBLE'}",
+            f"Total constraints: {self.total_constraints}",
+            f"Infeasible constraints: {self.infeasible_constraints}",
+            f"Maximum violation: {self.max_violation:.6e}",
+            f"Total violation: {self.total_violation:.6e}",
+            "Violations by severity:",
+        ]
+        for severity in SEVERITY_ORDER:
+            count = self.violations_by_severity.get(severity, 0)
+            lines.append(f"  {severity}: {count}")
+        return "\n".join(lines)
 
 
 class UnfeasibilityDetector:
@@ -166,9 +222,9 @@ class UnfeasibilityDetector:
             constraint, self.tolerance
         )
 
-        if not result["feasible"]:
-            violation = result["violation"]
-            violation_type = result["violation_type"]
+        if not result.feasible:
+            violation = result.violation
+            violation_type = result.violation_type
             severity = self._classify_severity(violation)
 
             return ConstraintViolation(
@@ -227,21 +283,21 @@ class UnfeasibilityDetector:
 
         return violations
 
-    def feasibility_report(self) -> Dict[str, Any]:
+    def feasibility_report(self) -> FeasibilityReport:
         """
         Generate a comprehensive feasibility report.
 
         Returns
         -------
-        Dict[str, Any]
-            Report with keys:
-            - 'is_feasible': bool
-            - 'total_constraints': int
-            - 'infeasible_constraints': int
-            - 'violations_by_severity': Dict[str, int]
-            - 'max_violation': float
-            - 'constraint_violations': List[ConstraintViolation]
-            - 'total_violation': float
+        FeasibilityReport
+            Report containing:
+            - is_feasible: bool
+            - total_constraints: int
+            - infeasible_constraints: int
+            - violations_by_severity: Dict[str, int]
+            - max_violation: float
+            - constraint_violations: List[ConstraintViolation]
+            - total_violation: float
         """
         violations = self.find_infeasible_constraints()
 
@@ -262,15 +318,15 @@ class UnfeasibilityDetector:
             list(self.model.component_data_objects(Constraint, active=True))
         )
 
-        return {
-            "is_feasible": len(violations) == 0,
-            "total_constraints": total_constraints,
-            "infeasible_constraints": len(violations),
-            "violations_by_severity": violations_by_severity,
-            "max_violation": max_violation,
-            "total_violation": total_violation,
-            "constraint_violations": violations,
-        }
+        return FeasibilityReport(
+            is_feasible=len(violations) == 0,
+            total_constraints=total_constraints,
+            infeasible_constraints=len(violations),
+            violations_by_severity=violations_by_severity,
+            max_violation=max_violation,
+            total_violation=total_violation,
+            constraint_violations=violations,
+        )
 
     def get_most_violated_constraints(
         self, top_n: int = 10
